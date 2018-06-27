@@ -3,6 +3,7 @@ from tkinter import Canvas
 import time
 from random import randint
 
+
 class Application(tk.Frame):
 
     class Food(object):
@@ -14,25 +15,16 @@ class Application(tk.Frame):
         def random(self):
             return randint(0, len(self.mat[0]) - 1), randint(0, len(self.mat) - 1)
 
-    def callback4(self, event):
-        if self.direction[0] != 0:
-            self.direction = (0, -1)
-            print('up')
-
-    def callback5(self, event):
-        if self.direction[0] != 0:
+    def changedirection(self, event):
+        print(event.keycode, event.keysym)
+        if event.keysym == 'Down' and self.direction[0] != 0:
             self.direction = (0, 1)
-            print('down')
-
-    def callback6(self, event):
-        if self.direction[0] == 0:
+        elif event.keysym == 'Up' and self.direction[0] != 0:
+            self.direction = (0, -1)
+        elif event.keysym == 'Left' and self.direction[0] == 0:
             self.direction = (-1, 0)
-            print('left')
-
-    def callback7(self, event):
-        if self.direction[0] == 0:
+        elif event.keysym == 'Right' and self.direction[0] == 0:
             self.direction = (1, 0)
-            print('right')
 
     def __init__(self, master=None):
         super().__init__(master)
@@ -41,10 +33,10 @@ class Application(tk.Frame):
         self.width, self.height = 800, 400
         self.unit = 20
         f = Canvas(master, width=self.width, height=self.height, bg='gray')
-        f.bind('<Up>', self.callback4)
-        f.bind('<Down>', self.callback5)
-        f.bind('<Left>', self.callback6)
-        f.bind('<Right>', self.callback7)
+        f.bind('<Up>', self.changedirection)
+        f.bind('<Down>', self.changedirection)
+        f.bind('<Left>', self.changedirection)
+        f.bind('<Right>', self.changedirection)
         f.focus_set()
         f.pack()
         for i in range(0, self.height, self.unit):
@@ -69,6 +61,7 @@ class Application(tk.Frame):
 
         # create snake
         self.snake = [(0, 0), (1, 0)]
+        # TODO need two direction
         self.direction = (1, 0)
         self.food = self.Food(self.mat)
         self.updatefood()
@@ -84,7 +77,7 @@ class Application(tk.Frame):
             if not collide:
                 print('game over')
                 break
-            elif collide == 'eatfood':
+            elif collide == 'eat food':
                 self.createrect(newhead[0], newhead[1])
                 self.snake = self.snake + [newhead]
             else:
