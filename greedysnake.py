@@ -2,7 +2,13 @@ import tkinter as tk
 from tkinter import Canvas
 import time
 from random import randint
+from collections import deque
+import numpy as np
+import threading
 
+# class CallbackThread(threading.Thread):
+#     def __init__(self, queue):
+        
 
 class Application(tk.Frame):
 
@@ -17,14 +23,7 @@ class Application(tk.Frame):
 
     def changedirection(self, event):
         print(event.keycode, event.keysym)
-        if event.keysym == 'Down' and self.direction[0] != 0:
-            self.direction = (0, 1)
-        elif event.keysym == 'Up' and self.direction[0] != 0:
-            self.direction = (0, -1)
-        elif event.keysym == 'Left' and self.direction[0] == 0:
-            self.direction = (-1, 0)
-        elif event.keysym == 'Right' and self.direction[0] == 0:
-            self.direction = (1, 0)
+        self.directionq.appendleft(self.directiondict[event.keysym])
 
     def __init__(self, master=None):
         super().__init__(master)
@@ -45,7 +44,11 @@ class Application(tk.Frame):
             f.create_line(i, 0, i, self.height)
         self.f = f
         self.mat = [[0] * (self.width // self.unit) for _ in range(self.height // self.unit)]
-        print(len(self.mat), len(self.mat[0]))
+        print('canvas matrix', len(self.mat), len(self.mat[0]))
+
+        # direction queue
+        self.directiondict = {'Down': (0, 1), 'Up': (0, -1), 'Left': (-1, 0), 'Right': (1, 0)}
+        self.directionq = deque([])
 
     def create_widgets(self):
         self.startgamebut = tk.Button(self)
@@ -58,6 +61,10 @@ class Application(tk.Frame):
 
     def startgame(self):
         print('start game!')
+        # clear out the canvas
+        if hasattr(self, 'snake'):
+            self.clearsnake()
+            self.f.delete('food')
 
         # create snake
         self.snake = [(0, 0), (1, 0)]
@@ -65,29 +72,42 @@ class Application(tk.Frame):
         self.direction = (1, 0)
         self.food = self.Food(self.mat)
         self.updatefood()
-        #
+
+        # start game
         self.fillsnake()
-        starttime = time.time()
-        while True:
-            time.sleep(0.3)
-            head = self.snake[-1]
-            # newsnake = list(self.snake[1:]) + [(head[0] + self.direction[0], head[1] + self.direction[1])]
-            newhead = (head[0] + self.direction[0], head[1] + self.direction[1])
-            collide = self.check_collision(newhead)
-            if not collide:
-                print('game over')
+        self.snakemove()
+
+    def snakemove(self):
+        print('new iter')
+        head = self.snake[-1]
+        while self.directionq:
+            newdirection = self.directionq.pop()
+            if np.inner(newdirection, self.direction) == 0:
+                self.direction = newdirection
                 break
-            elif collide == 'eat food':
-                self.createrect(newhead[0], newhead[1])
-                self.snake = self.snake + [newhead]
-            else:
-                self.updatesnake(self.snake[0], newhead)
-                self.snake = self.snake[1:] + [newhead]
-            print(self.snake)
+        # newsnake = list(self.snake[1:]) + [(head[0] + self.direction[0], head[1] + self.direction[1])]
+        newhead = (head[0] + self.direction[0], head[1] + self.direction[1])
+        collide = self.check_collision(newhead)
+        if not collide:
+            print('game over')
+            return
+        elif collide == 'eat food':
+            self.createrect(newhead[0], newhead[1])
+            self.snake = self.snake + [newhead]
+        else:
+            self.updatesnake(self.snake[0], newhead)
+            self.snake = self.snake[1:] + [newhead]
+        print(self.snake)
+        self.after(300, self.snakemove)
 
     def fillsnake(self):
         for i, j in self.snake:
             self.createrect(i, j)
+        self.f.update()
+
+    def clearsnake(self):
+        for i, j in self.snake:
+            self.f.delete('snake_{}_{}'.format(i, j))
         self.f.update()
 
     def updatesnake(self, tail, head):
